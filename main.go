@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+
+	"github.com/zcalusic/sysinfo"
 )
 
 func main() {
@@ -19,6 +21,7 @@ func main() {
 	wildcard := getWildcard()
 
 	regenerate := true
+	install := false
 
 	if _, err := os.Stat("out/root.key"); err == nil {
 		regenerate = getRegenerate()
@@ -29,15 +32,22 @@ func main() {
 	}
 
 	if regenerate {
+		install = getInstall()
+
 		generateRootPrivate()
 		generateRootCertificate(expires)
+
+		if install {
+			install = installRoot()
+		}
+
 	}
 
 	generateClientPrivate(domain)
 	generateClientRequest(domain, wildcard)
 	generateClientCertificate(domain, expires, wildcard)
 
-	result(domain)
+	result(domain, regenerate, install)
 }
 
 func getDomain() string {
@@ -54,6 +64,10 @@ func getWildcard() bool {
 
 func getRegenerate() bool {
 	return inputBool("Root certificate detected, regenerate? [false]", false)
+}
+
+func getInstall() bool {
+	return inputBool("Try to install automatically? [true]", true)
 }
 
 func generateRootPrivate() {
@@ -111,17 +125,46 @@ func generateClientCertificate(domain, expire string, wildcard bool) {
 	os.Remove("out/" + domain + ".csr")
 }
 
-func result(domain string) {
+func installRoot() bool {
+	var info sysinfo.SysInfo
+	info.GetSysInfo()
+
+	switch info.OS.Vendor {
+	case "fedora":
+		command(
+			"Copying root certificate",
+			"sudo", "cp", "out/root.crt", "/etc/pki/ca-trust/source/anchors/certificate-generator-root.crt",
+		)
+
+		command(
+			"Installing root certificate",
+			"sudo", "update-ca-trust",
+		)
+		return true
+
+	default:
+		fmt.Println("\nAutomatic install not supported on", info.OS.Vendor)
+		input("Press enter to continue...", "")
+
+		return false
+	}
+}
+
+func result(domain string, regenerated, installed bool) {
+	installReminder := "\nAdd out/root.crt to your system trust centre"
+	if !regenerated || regenerated && installed {
+		installReminder = ""
+	}
+
 	fmt.Printf(`
 ======================================
 
-Certificates generated!
-Don't forget to add out/root.crt to your system trust centre
+Certificates generated!%s
 
 Key:	out/%s.key 
 Cert:	out/%s.crt
 
-======================================`, domain, domain)
+======================================`, installReminder, domain, domain)
 }
 
 func input(hint, defaultResult string) string {
