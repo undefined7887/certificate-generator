@@ -36,6 +36,8 @@ func main() {
 	generateClientPrivate(domain)
 	generateClientRequest(domain, wildcard)
 	generateClientCertificate(domain, expires, wildcard)
+
+	result(domain)
 }
 
 func getDomain() string {
@@ -106,6 +108,20 @@ func generateClientCertificate(domain, expire string, wildcard bool) {
 	)
 
 	os.Remove("out/v3.ext")
+	os.Remove("out/" + domain + ".csr")
+}
+
+func result(domain string) {
+	fmt.Printf(`
+======================================
+
+Certificates generated!
+Don't forget to add out/root.crt to your system trust centre
+
+Key:	out/%s.key 
+Cert:	out/%s.crt
+
+======================================`, domain, domain)
 }
 
 func input(hint, defaultResult string) string {
