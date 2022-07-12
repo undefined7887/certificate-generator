@@ -66,7 +66,7 @@ func generateRootPrivate() {
 func generateRootCertificate(expire string) {
 	command(
 		"Generating root certificate",
-		"openssl", "req", "-x509", "-new", "-nodes", "-key", "out/root.key", "-sha256", "-days", expire, "-subj", "/CN=root", "-out", "out/root.crt",
+		"openssl", "req", "-x509", "-new", "-nodes", "-key", "out/root.key", "-sha256", "-days", expire, "-subj", "/CN=local", "-out", "out/root.crt",
 	)
 }
 
