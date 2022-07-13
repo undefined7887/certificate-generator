@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/zcalusic/sysinfo"
+	"github.com/elastic/go-sysinfo"
 )
 
 func main() {
@@ -126,11 +126,16 @@ func generateClientCertificate(domain, expire string, wildcard bool) {
 }
 
 func installRoot() bool {
-	var info sysinfo.SysInfo
-	info.GetSysInfo()
+	host, err := sysinfo.Host()
+	if err != nil {
+		fmt.Println("\nFailed to get host info")
+		return false
+	}
 
-	switch info.OS.Vendor {
-	case "fedora":
+	info := host.Info()
+
+	switch info.OS.Family {
+	case "redhat":
 		command(
 			"Copying root certificate",
 			"sudo", "cp", "out/root.crt", "/etc/pki/ca-trust/source/anchors/certificate-generator-root.crt",
@@ -143,7 +148,7 @@ func installRoot() bool {
 		return true
 
 	default:
-		fmt.Println("\nAutomatic install not supported on", info.OS.Vendor)
+		fmt.Println("\nAutomatic install not supported on", info.OS.Family)
 		input("Press enter to continue...", "")
 
 		return false
